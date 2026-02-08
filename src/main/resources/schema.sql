@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS papers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(500) NOT NULL,
+    author VARCHAR(300) NOT NULL,
+    abstract_text TEXT,
+    journal VARCHAR(300),
+    status VARCHAR(50) DEFAULT 'SUBMITTED',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
