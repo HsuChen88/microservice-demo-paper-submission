@@ -52,20 +52,20 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   Paper Submission Service               │
-│                                                          │
+│                   Paper Submission Service              │
+│                                                         │
 │  ┌──────────────┐    ┌──────────────┐    ┌────────────┐ │
-│  │  Controller   │───▶│   Service    │───▶│ Repository │ │
-│  │  (REST API)   │    │  (Business)  │    │   (JPA)    │ │
+│  │  Controller  │───▶│   Service    │───▶│ Repository │ │
+│  │  (REST API)  │    │  (Business)  │    │   (JPA)    │ │
 │  └──────────────┘    └──────┬───────┘    └─────┬──────┘ │
-│                             │                   │        │
-│                             ▼                   ▼        │
-│                    ┌────────────────┐    ┌────────────┐  │
-│                    │  Kafka Producer│    │ PostgreSQL  │  │
-│                    │  (Event Pub)   │    │  (papers)   │  │
-│                    └────────┬───────┘    └────────────┘  │
-│                             │                            │
-└─────────────────────────────┼────────────────────────────┘
+│                             │                   │       │
+│                             ▼                   ▼       │
+│                    ┌────────────────┐    ┌────────────┐ │
+│                    │  Kafka Producer│    │ PostgreSQL │ │
+│                    │  (Event Pub)   │    │  (papers)  │ │
+│                    └────────┬───────┘    └────────────┘ │
+│                             │                           │
+└─────────────────────────────┼───────────────────────────┘
                               │
                               ▼
                     ┌──────────────────┐
@@ -114,116 +114,6 @@ com/papersubmission/
 └── service/
     └── SubmissionService.java         # 核心商業邏輯服務
 ```
-
----
-
-## 各模組詳細說明
-
-### `PaperSubmissionApplication.java`
-
-Spring Boot 應用程式入口，使用 `@SpringBootApplication` 啟用自動組態、元件掃描及 Spring Boot 預設設定。
-
-### `controller/SubmissionController.java`
-
-對外公開的 REST 控制器，掛載於 `/api/v1/submissions`。
-
-- **`POST /api/v1/submissions`** — 建立新論文投稿
-  - 接收 `@Valid @RequestBody PaperRequest`，經由 Bean Validation 驗證
-  - 回傳 `PaperResponse` 包含完整論文資訊
-- **`GET /api/v1/submissions/{id}`** — 依 UUID 查詢單一論文
-- **`GET /api/v1/submissions`** — 查詢全部論文清單
-
-### `controller/InternalPaperController.java`
-
-內部服務間呼叫的控制器，掛載於 `/api/internal/papers`。
-
-- **`GET /api/internal/papers/{id}`** — 供 Catalog Service 等內部服務查詢論文詳細資訊
-- 不經過外部 Gateway 路由，僅限 Kubernetes 叢集內部透過 ClusterIP 存取
-
-### `dto/PaperRequest.java`
-
-以 Java Record 實作的不可變請求 DTO：
-
-```java
-public record PaperRequest(
-    @NotBlank String title,      // 必填，論文標題
-    @NotBlank String author,     // 必填，作者
-    String abstractText,          // 選填，摘要
-    String journal                // 選填，期刊名稱
-) {}
-```
-
-### `dto/PaperResponse.java`
-
-以 Java Record 實作的不可變回應 DTO，提供 `fromEntity(Paper)` 靜態工廠方法將 JPA 實體轉為回應物件：
-
-```java
-public record PaperResponse(
-    UUID id, String title, String author,
-    String abstractText, String journal, String status,
-    LocalDateTime createdAt, LocalDateTime updatedAt
-) {
-    public static PaperResponse fromEntity(Paper paper) { ... }
-}
-```
-
-### `service/SubmissionService.java`
-
-核心商業邏輯層：
-
-- **`createPaper(PaperRequest)`**：
-  1. 將 `PaperRequest` 轉換為 `Paper` 實體
-  2. 透過 `PaperRepository.save()` 持久化至 PostgreSQL（`@Transactional`）
-  3. 建構 `PaperCreatedEvent` 並透過 `PaperEventProducer` 非同步發送至 Kafka
-  4. Kafka 發送採用 fire-and-forget + try-catch，失敗僅記錄 log，不影響主流程
-  5. 回傳 `PaperResponse`
-- **`getPaperById(UUID)`**：查詢論文，找不到時拋出 `RuntimeException`
-- **`getAllPapers()`**：回傳所有論文的 `List<PaperResponse>`
-
-### `model/Paper.java`
-
-JPA 實體，對映至 `papers` 資料表：
-
-| 欄位 | 型別 | 約束 | 說明 |
-|---|---|---|---|
-| `id` | `UUID` | PK, auto-generated | 主鍵，由 JPA 自動生成 |
-| `title` | `VARCHAR(500)` | NOT NULL | 論文標題 |
-| `author` | `VARCHAR(300)` | NOT NULL | 作者 |
-| `abstractText` | `TEXT` | nullable | 摘要 |
-| `journal` | `VARCHAR(300)` | nullable | 期刊名稱 |
-| `status` | `VARCHAR(50)` | default "SUBMITTED" | 論文狀態 |
-| `createdAt` | `TIMESTAMP` | NOT NULL, auto | 建立時間 |
-| `updatedAt` | `TIMESTAMP` | NOT NULL, auto | 更新時間 |
-
-使用 `@PrePersist` / `@PreUpdate` lifecycle callback 自動管理時間戳記。
-
-### `repository/PaperRepository.java`
-
-繼承 `JpaRepository<Paper, UUID>`，自動獲得標準 CRUD 方法（`save`, `findById`, `findAll`, `deleteById` 等），無需手動實作。
-
-### `kafka/PaperEventProducer.java`
-
-Kafka 事件發布器：
-
-- 注入 `KafkaTemplate<String, String>` 與 `ObjectMapper`
-- 將 `PaperCreatedEvent` 序列化為 JSON，發送至 `paper-events` topic
-- 使用 `paperId` 作為 Kafka message key，確保同一論文的事件落在相同 partition
-- 非同步發送並註冊 callback 記錄成功/失敗 log
-
-### `kafka/PaperCreatedEvent.java`
-
-以 Java Record 實作的事件 DTO，提供 `from(...)` 靜態工廠方法：
-
-```java
-public record PaperCreatedEvent(
-    String id, String title, String author,
-    String abstractText, String status, String createdAt
-) {
-    public static PaperCreatedEvent from(...) { ... }
-}
-```
-
-`createdAt` 以 ISO-8601 格式序列化，確保跨服務時間戳記解析一致性。
 
 ---
 
@@ -369,22 +259,22 @@ createPaper() ──▶ DB save ──▶ Build PaperCreatedEvent
                                         ▼
                               PaperEventProducer.send()
                                         │
-                              ┌─────────┴─────────┐
-                              │  KafkaTemplate     │
+                              ┌─────────┴──────────────┐
+                              │  KafkaTemplate         │
                               │  .send("paper-events", │
-                              │    key=paperId,    │
-                              │    value=JSON)     │
-                              └─────────┬─────────┘
+                              │    key=paperId,        │
+                              │    value=JSON)         │
+                              └─────────┬──────────────┘
                                         │
-                              ┌─────────▼─────────┐
-                              │  Kafka Broker      │
+                              ┌─────────▼───────────┐
+                              │  Kafka Broker       │
                               │  Topic: paper-events│
-                              └─────────┬─────────┘
+                              └─────────┬───────────┘
                                         │
-                              ┌─────────▼─────────┐
-                              │ Catalog Service    │
-                              │ (Consumer Group)   │
-                              └───────────────────┘
+                              ┌─────────▼────────┐
+                              │ Catalog Service  │
+                              │ (Consumer Group) │
+                              └──────────────────┘
 ```
 
 ---
