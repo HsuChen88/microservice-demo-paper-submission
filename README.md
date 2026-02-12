@@ -22,15 +22,15 @@
 
 **Paper Submission Service** 是論文館藏微服務架構中的核心服務，負責論文投稿的建立、查詢與生命週期管理。採用 Spring Boot 3.4.1 搭配 Java 17 建構，透過 RESTful API 提供外部與內部存取介面，並以 Kafka 實現事件驅動的跨服務通訊。
 
-| 屬性 | 值 |
-|---|---|
-| 框架 | Spring Boot 3.4.1 |
-| 語言 | Java 17 |
-| 資料庫 | PostgreSQL |
-| 訊息佇列 | Apache Kafka |
+| 屬性     | 值                           |
+| -------- | ---------------------------- |
+| 框架     | Spring Boot 3.4.1            |
+| 語言     | Java 17                      |
+| 資料庫   | PostgreSQL                   |
+| 訊息佇列 | Apache Kafka                 |
 | 容錯機制 | Resilience4j Circuit Breaker |
-| 監控指標 | Micrometer + Prometheus |
-| 服務埠號 | 8081 |
+| 監控指標 | Micrometer + Prometheus      |
+| 服務埠號 | 8081                         |
 
 ---
 
@@ -71,9 +71,9 @@
                     ┌──────────────────┐
                     │   Kafka Topic    │
                     │  "paper-events"  │
-                    └────────┬─────────┘
-                             │
-                             ▼
+                    └─────────┬────────┘
+                              │
+                              ▼
                     ┌──────────────────┐
                     │ Catalog Service  │
                     │  (Consumer)      │
@@ -82,14 +82,14 @@
 
 **分層架構**：
 
-| 層級 | 職責 | 對應類別 |
-|---|---|---|
+| 層級       | 職責                               | 對應類別                                          |
+| ---------- | ---------------------------------- | ------------------------------------------------- |
 | Controller | 接收 HTTP 請求、參數驗證、路由分發 | `SubmissionController`, `InternalPaperController` |
-| Service | 商業邏輯、交易管理、事件發布 | `SubmissionService` |
-| Repository | 資料持久化、CRUD 操作 | `PaperRepository` |
-| Kafka | 非同步事件發布 | `PaperEventProducer`, `PaperCreatedEvent` |
-| DTO | 請求/回應資料傳輸物件 | `PaperRequest`, `PaperResponse` |
-| Model | JPA 實體對映 | `Paper` |
+| Service    | 商業邏輯、交易管理、事件發布       | `SubmissionService`                               |
+| Repository | 資料持久化、CRUD 操作              | `PaperRepository`                                 |
+| Kafka      | 非同步事件發布                     | `PaperEventProducer`, `PaperCreatedEvent`         |
+| DTO        | 請求/回應資料傳輸物件              | `PaperRequest`, `PaperResponse`                   |
+| Model      | JPA 實體對映                       | `Paper`                                           |
 
 ---
 
@@ -134,12 +134,12 @@ com/papersubmission/
 }
 ```
 
-| 欄位 | 型別 | 必填 | 驗證規則 |
-|---|---|---|---|
-| `title` | String | 是 | `@NotBlank`，不可為空白 |
-| `author` | String | 是 | `@NotBlank`，不可為空白 |
-| `abstractText` | String | 否 | — |
-| `journal` | String | 否 | — |
+| 欄位           | 型別   | 必填 | 驗證規則                |
+| -------------- | ------ | ---- | ----------------------- |
+| `title`        | String | 是   | `@NotBlank`，不可為空白 |
+| `author`       | String | 是   | `@NotBlank`，不可為空白 |
+| `abstractText` | String | 否   | —                       |
+| `journal`      | String | 否   | —                       |
 
 **Response (200 OK):**
 
@@ -164,8 +164,8 @@ com/papersubmission/
 
 **Path Parameter:**
 
-| 參數 | 型別 | 說明 |
-|---|---|---|
+| 參數 | 型別 | 說明           |
+| ---- | ---- | -------------- |
 | `id` | UUID | 論文唯一識別碼 |
 
 **Response (200 OK):** 同上述 `PaperResponse` 結構。
@@ -197,11 +197,11 @@ com/papersubmission/
 
 ### Actuator Endpoints（運維監控）
 
-| Endpoint | 說明 |
-|---|---|
-| `GET /actuator/health` | 健康檢查（含 DB、Kafka 狀態） |
-| `GET /actuator/prometheus` | Prometheus 格式的 metrics |
-| `GET /actuator/info` | 應用程式資訊 |
+| Endpoint                   | 說明                          |
+| -------------------------- | ----------------------------- |
+| `GET /actuator/health`     | 健康檢查（含 DB、Kafka 狀態） |
+| `GET /actuator/prometheus` | Prometheus 格式的 metrics     |
+| `GET /actuator/info`       | 應用程式資訊                  |
 
 ---
 
@@ -230,13 +230,13 @@ CREATE TABLE IF NOT EXISTS papers (
 
 ### Topic: `paper-events`
 
-| 屬性 | 值 |
-|---|---|
-| Topic 名稱 | `paper-events` |
-| Message Key | `paperId`（UUID 字串） |
-| Message Value | JSON 格式的 `PaperCreatedEvent` |
-| 發送模式 | 非同步 fire-and-forget |
-| 錯誤處理 | try-catch + SLF4J 日誌，不中斷主流程 |
+| 屬性          | 值                                   |
+| ------------- | ------------------------------------ |
+| Topic 名稱    | `paper-events`                       |
+| Message Key   | `paperId`（UUID 字串）               |
+| Message Value | JSON 格式的 `PaperCreatedEvent`      |
+| 發送模式      | 非同步 fire-and-forget               |
+| 錯誤處理      | try-catch + SLF4J 日誌，不中斷主流程 |
 
 ### 事件 Payload 範例
 
@@ -289,11 +289,11 @@ resilience4j:
     instances:
       default:
         registerHealthIndicator: true
-        slidingWindowSize: 10            # 滑動窗口大小
-        minimumNumberOfCalls: 5          # 最少呼叫次數才開始統計
-        failureRateThreshold: 50         # 失敗率門檻 (%)
-        waitDurationInOpenState: 10s     # Open 狀態等待時間
-        permittedNumberOfCallsInHalfOpenState: 3  # Half-Open 時允許的呼叫數
+        slidingWindowSize: 10 # 滑動窗口大小
+        minimumNumberOfCalls: 5 # 最少呼叫次數才開始統計
+        failureRateThreshold: 50 # 失敗率門檻 (%)
+        waitDurationInOpenState: 10s # Open 狀態等待時間
+        permittedNumberOfCallsInHalfOpenState: 3 # Half-Open 時允許的呼叫數
 ```
 
 ### 狀態轉換
@@ -316,21 +316,21 @@ resilience4j:
 
 ### 環境變數
 
-| 變數 | 預設值 | 說明 |
-|---|---|---|
-| `DB_HOST` | `localhost` | PostgreSQL 主機位址 |
-| `DB_PORT` | `5432` | PostgreSQL 埠號 |
-| `DB_NAME` | `submission_db` | 資料庫名稱 |
-| `DB_USER` | `postgres` | 資料庫使用者 |
-| `DB_PASS` | `postgres` | 資料庫密碼 |
+| 變數              | 預設值           | 說明                    |
+| ----------------- | ---------------- | ----------------------- |
+| `DB_HOST`         | `localhost`      | PostgreSQL 主機位址     |
+| `DB_PORT`         | `5432`           | PostgreSQL 埠號         |
+| `DB_NAME`         | `submission_db`  | 資料庫名稱              |
+| `DB_USER`         | `postgres`       | 資料庫使用者            |
+| `DB_PASS`         | `postgres`       | 資料庫密碼              |
 | `KAFKA_BOOTSTRAP` | `localhost:9092` | Kafka Bootstrap Servers |
 
 ### 相依服務
 
-| 服務 | 用途 | 必要性 |
-|---|---|---|
-| PostgreSQL | 論文資料持久化 | **必要** — 無法啟動 |
-| Kafka | 事件發布（非同步通知 Catalog Service） | **非必要** — 發送失敗僅記錄 log |
+| 服務       | 用途                                   | 必要性                          |
+| ---------- | -------------------------------------- | ------------------------------- |
+| PostgreSQL | 論文資料持久化                         | **必要** — 無法啟動             |
+| Kafka      | 事件發布（非同步通知 Catalog Service） | **非必要** — 發送失敗僅記錄 log |
 
 ---
 
@@ -390,18 +390,18 @@ helm upgrade --install submission infra/helm-charts/paper-submission \
 
 ### 資源配置（依環境）
 
-| 環境 | Replicas | CPU Request | CPU Limit | Memory Request | Memory Limit | HPA |
-|---|---|---|---|---|---|---|
-| Dev | 1 | 50m | 500m | 256Mi | 512Mi | 停用 |
-| QA | 2 | 100m | 500m | 256Mi | 512Mi | 停用 |
-| Prod | 3–10 | 200m | 1000m | 512Mi | 1Gi | 啟用 |
+| 環境 | Replicas | CPU Request | CPU Limit | Memory Request | Memory Limit | HPA  |
+| ---- | -------- | ----------- | --------- | -------------- | ------------ | ---- |
+| Dev  | 1        | 50m         | 500m      | 256Mi          | 512Mi        | 停用 |
+| QA   | 2        | 100m        | 500m      | 256Mi          | 512Mi        | 停用 |
+| Prod | 3–10     | 200m        | 1000m     | 512Mi          | 1Gi          | 啟用 |
 
 ### HPA 自動擴展策略（Production）
 
-| 指標 | 目標使用率 | 最小副本 | 最大副本 |
-|---|---|---|---|
-| CPU | 70% | 3 | 10 |
-| Memory | 75% | 3 | 10 |
+| 指標   | 目標使用率 | 最小副本 | 最大副本 |
+| ------ | ---------- | -------- | -------- |
+| CPU    | 70%        | 3        | 10       |
+| Memory | 75%        | 3        | 10       |
 
 ### 效能特性分析
 
@@ -436,10 +436,10 @@ HTTP Request → JPA findById (DB read) → Entity → DTO → HTTP Response
 
 ### 可觀測性
 
-| 面向 | 工具 | Endpoint |
-|---|---|---|
-| Metrics | Micrometer + Prometheus | `/actuator/prometheus` |
-| Health Check | Spring Boot Actuator | `/actuator/health` |
+| 面向                 | 工具                          | Endpoint                         |
+| -------------------- | ----------------------------- | -------------------------------- |
+| Metrics              | Micrometer + Prometheus       | `/actuator/prometheus`           |
+| Health Check         | Spring Boot Actuator          | `/actuator/health`               |
 | Circuit Breaker 狀態 | Resilience4j Health Indicator | `/actuator/health`（含 CB 狀態） |
 
 Helm Chart 已配置 Prometheus scrape annotations：
@@ -452,25 +452,25 @@ prometheus.io/path: "/actuator/prometheus"
 
 ### 可靠性設計
 
-| 機制 | 實作 | 目的 |
-|---|---|---|
-| Startup Probe | `/actuator/health`, initialDelay=30s | 避免在 JVM 啟動期間被殺掉 |
-| Liveness Probe | `/actuator/health`, period=10s | 偵測 deadlock/hang 並重啟 |
-| Readiness Probe | `/actuator/health`, period=5s | 確保流量只導向就緒的 Pod |
-| PDB | minAvailable=2 (prod) | 滾動更新時保證最低可用副本 |
-| Circuit Breaker | Resilience4j | Kafka 或下游故障時快速失敗 |
+| 機制            | 實作                                 | 目的                       |
+| --------------- | ------------------------------------ | -------------------------- |
+| Startup Probe   | `/actuator/health`, initialDelay=30s | 避免在 JVM 啟動期間被殺掉  |
+| Liveness Probe  | `/actuator/health`, period=10s       | 偵測 deadlock/hang 並重啟  |
+| Readiness Probe | `/actuator/health`, period=5s        | 確保流量只導向就緒的 Pod   |
+| PDB             | minAvailable=2 (prod)                | 滾動更新時保證最低可用副本 |
+| Circuit Breaker | Resilience4j                         | Kafka 或下游故障時快速失敗 |
 
 ### 已知限制與改善方向
 
-| 項目 | 現況 | 建議改善 |
-|---|---|---|
-| 分頁查詢 | `findAll()` 無分頁 | 加入 `Pageable` 參數支援 `page`, `size` |
-| 錯誤處理 | 查無資料拋出 `RuntimeException` | 改用自訂 Exception + `@ControllerAdvice` 全域錯誤處理 |
-| 快取 | 無 | 對高頻讀取加入 Redis/Caffeine 快取 |
-| 認證授權 | 無 | 整合 Spring Security + OAuth2/JWT |
-| 資料庫索引 | 僅主鍵索引 | 依查詢模式加入 `title`, `author` 複合索引 |
-| Kafka 重試 | fire-and-forget | 加入 Kafka Producer retry 與 Dead Letter Topic |
-| API 文件 | 無 | 整合 SpringDoc OpenAPI (Swagger UI) |
+| 項目       | 現況                            | 建議改善                                              |
+| ---------- | ------------------------------- | ----------------------------------------------------- |
+| 分頁查詢   | `findAll()` 無分頁              | 加入 `Pageable` 參數支援 `page`, `size`               |
+| 錯誤處理   | 查無資料拋出 `RuntimeException` | 改用自訂 Exception + `@ControllerAdvice` 全域錯誤處理 |
+| 快取       | 無                              | 對高頻讀取加入 Redis/Caffeine 快取                    |
+| 認證授權   | 無                              | 整合 Spring Security + OAuth2/JWT                     |
+| 資料庫索引 | 僅主鍵索引                      | 依查詢模式加入 `title`, `author` 複合索引             |
+| Kafka 重試 | fire-and-forget                 | 加入 Kafka Producer retry 與 Dead Letter Topic        |
+| API 文件   | 無                              | 整合 SpringDoc OpenAPI (Swagger UI)                   |
 
 ---
 
@@ -491,6 +491,7 @@ docker build -t paper-submission:latest ./paper-submission
 ```
 
 Multi-stage Dockerfile：
+
 - **Build Stage**: `maven:3.9-eclipse-temurin-17` — 編譯 JAR
 - **Runtime Stage**: `eclipse-temurin:17-jre` — 僅包含 JRE，減小映像體積
 
@@ -502,11 +503,11 @@ Multi-stage Dockerfile：
 
 ### 技術棧依賴版本
 
-| 依賴 | 版本 |
-|---|---|
-| Spring Boot | 3.4.1 |
-| Java | 17 |
-| Resilience4j | 2.2.0 |
-| PostgreSQL Driver | (managed by Spring Boot BOM) |
-| Spring Kafka | (managed by Spring Boot BOM) |
+| 依賴                  | 版本                         |
+| --------------------- | ---------------------------- |
+| Spring Boot           | 3.4.1                        |
+| Java                  | 17                           |
+| Resilience4j          | 2.2.0                        |
+| PostgreSQL Driver     | (managed by Spring Boot BOM) |
+| Spring Kafka          | (managed by Spring Boot BOM) |
 | Micrometer Prometheus | (managed by Spring Boot BOM) |
